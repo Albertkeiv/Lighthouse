@@ -1,16 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"os/exec"
-	"strconv"
 	"sync"
 )
 
 var (
 	activeProfile *Profile
-	activeCmds    []*exec.Cmd
+	activeTunnels []Tunnel
 	mu            sync.Mutex
 )
 
@@ -31,46 +27,28 @@ func ActivateProfile(p Profile) error {
 		return nil
 	}
 
-	var cmds []*exec.Cmd
+	var started []Tunnel
 	for _, t := range p.Tunnels {
 		if authProvider != nil {
 			if err := authProvider.Authenticate(t); err != nil {
-				for _, c := range cmds {
-					if c.Process != nil {
-						_ = c.Process.Kill()
-					}
+				for _, st := range started {
+					_ = StopTunnel(st)
 				}
 				return err
 			}
 		}
 
-		args := []string{
-			"-o", "PreferredAuthentications=publickey",
-			"-o", "PasswordAuthentication=no",
-			"-N",
-			"-L", fmt.Sprintf("%s:%d:%s:%d", t.LocalDomain, t.LocalPort, t.RemoteHost, t.RemotePort),
-		}
-		if t.SSHKeyPath != "" {
-			args = append(args, "-i", t.SSHKeyPath)
-		}
-		args = append(args, "-p", strconv.Itoa(t.SSHPort), fmt.Sprintf("%s@%s", t.SSHUser, t.SSHServer))
-		cmd := exec.Command("ssh", args...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Start(); err != nil {
-			// stop any started tunnels on error
-			for _, c := range cmds {
-				if c.Process != nil {
-					_ = c.Process.Kill()
-				}
+		if err := StartTunnel(t); err != nil {
+			for _, st := range started {
+				_ = StopTunnel(st)
 			}
 			return err
 		}
-		cmds = append(cmds, cmd)
+		started = append(started, t)
 	}
 
 	activeProfile = &p
-	activeCmds = cmds
+	activeTunnels = started
 	return nil
 }
 
@@ -86,15 +64,12 @@ func deactivateLocked() error {
 	if activeProfile == nil {
 		return nil
 	}
-	for _, c := range activeCmds {
-		if c.Process != nil {
-			if err := c.Process.Kill(); err != nil {
-				return err
-			}
-			_, _ = c.Process.Wait()
+	for _, t := range activeTunnels {
+		if err := StopTunnel(t); err != nil {
+			return err
 		}
 	}
 	activeProfile = nil
-	activeCmds = nil
+	activeTunnels = nil
 	return nil
 }
