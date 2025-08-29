@@ -162,3 +162,11 @@ func handleConn(lc net.Conn, client *ssh.Client, remoteAddr string) {
 		rc.Close()
 	}()
 }
+
+// IsTunnelRunning reports whether the specified tunnel is currently active.
+func IsTunnelRunning(t Tunnel) bool {
+	tunnelMu.Lock()
+	defer tunnelMu.Unlock()
+	_, ok := tunnelStates[t.Name]
+	return ok
+}
