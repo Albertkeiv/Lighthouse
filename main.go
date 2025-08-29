@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"strconv"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -33,6 +35,63 @@ func showProfileDialog(w fyne.Window, title string, p *Profile, onSave func(Prof
 	}, w)
 }
 
+// showTunnelDialog displays a dialog for creating or editing a tunnel configuration.
+// If t is non-nil, its fields populate the dialog entries. onSave is called with the
+// resulting tunnel when the user confirms the dialog.
+func showTunnelDialog(w fyne.Window, title string, t *Tunnel, onSave func(Tunnel)) {
+	nameEntry := widget.NewEntry()
+	sshServerEntry := widget.NewEntry()
+	sshPortEntry := widget.NewEntry()
+	sshUserEntry := widget.NewEntry()
+	sshKeyPathEntry := widget.NewEntry()
+	remoteHostEntry := widget.NewEntry()
+	remotePortEntry := widget.NewEntry()
+	localDomainEntry := widget.NewEntry()
+	localPortEntry := widget.NewEntry()
+
+	if t != nil {
+		nameEntry.SetText(t.Name)
+		sshServerEntry.SetText(t.SSHServer)
+		sshPortEntry.SetText(fmt.Sprintf("%d", t.SSHPort))
+		sshUserEntry.SetText(t.SSHUser)
+		sshKeyPathEntry.SetText(t.SSHKeyPath)
+		remoteHostEntry.SetText(t.RemoteHost)
+		remotePortEntry.SetText(fmt.Sprintf("%d", t.RemotePort))
+		localDomainEntry.SetText(t.LocalDomain)
+		localPortEntry.SetText(fmt.Sprintf("%d", t.LocalPort))
+	}
+
+	dialog.ShowForm(title, "Save", "Cancel", []*widget.FormItem{
+		{Text: "Name", Widget: nameEntry},
+		{Text: "SSH Server", Widget: sshServerEntry},
+		{Text: "SSH Port", Widget: sshPortEntry},
+		{Text: "SSH User", Widget: sshUserEntry},
+		{Text: "SSH Key Path", Widget: sshKeyPathEntry},
+		{Text: "Remote Host", Widget: remoteHostEntry},
+		{Text: "Remote Port", Widget: remotePortEntry},
+		{Text: "Local Domain", Widget: localDomainEntry},
+		{Text: "Local Port", Widget: localPortEntry},
+	}, func(b bool) {
+		if !b {
+			return
+		}
+		sshPort, _ := strconv.Atoi(sshPortEntry.Text)
+		remotePort, _ := strconv.Atoi(remotePortEntry.Text)
+		localPort, _ := strconv.Atoi(localPortEntry.Text)
+		onSave(Tunnel{
+			Name:        nameEntry.Text,
+			SSHServer:   sshServerEntry.Text,
+			SSHPort:     sshPort,
+			SSHUser:     sshUserEntry.Text,
+			SSHKeyPath:  sshKeyPathEntry.Text,
+			RemoteHost:  remoteHostEntry.Text,
+			RemotePort:  remotePort,
+			LocalDomain: localDomainEntry.Text,
+			LocalPort:   localPort,
+		})
+	}, w)
+}
+
 func main() {
 	a := app.New()
 	w := a.NewWindow("Lighthouse")
@@ -54,9 +113,91 @@ func main() {
 			},
 		)
 		selected := -1
-		list.OnSelected = func(id widget.ListItemID) {
-			selected = int(id)
-		}
+
+		tunnelList := widget.NewList(
+			func() int {
+				if selected >= 0 && selected < len(profiles) {
+					return len(profiles[selected].Tunnels)
+				}
+				return 0
+			},
+			func() fyne.CanvasObject {
+				name := widget.NewLabel("")
+				edit := widget.NewButton("Edit", nil)
+				del := widget.NewButton("Delete", nil)
+				start := widget.NewButton("Start", nil)
+				return container.NewHBox(name, edit, del, start)
+			},
+			func(i widget.ListItemID, obj fyne.CanvasObject) {
+				if selected < 0 || selected >= len(profiles) {
+					return
+				}
+				t := profiles[selected].Tunnels[i]
+				c := obj.(*fyne.Container)
+				name := c.Objects[0].(*widget.Label)
+				edit := c.Objects[1].(*widget.Button)
+				del := c.Objects[2].(*widget.Button)
+				start := c.Objects[3].(*widget.Button)
+
+				name.SetText(t.Name)
+
+				edit.OnTapped = func() {
+					existing := t
+					showTunnelDialog(w, "Edit Tunnel", &existing, func(nt Tunnel) {
+						profiles[selected].Tunnels[i] = nt
+						if err := SaveProfiles(profiles); err != nil {
+							log.Println("failed to save profiles:", err)
+						}
+						tunnelList.Refresh()
+					})
+				}
+
+				del.OnTapped = func() {
+					profiles[selected].Tunnels = append(profiles[selected].Tunnels[:i], profiles[selected].Tunnels[i+1:]...)
+					if err := SaveProfiles(profiles); err != nil {
+						log.Println("failed to save profiles:", err)
+					}
+					tunnelList.Refresh()
+				}
+
+				if IsTunnelRunning(t) {
+					start.SetText("Stop")
+					start.OnTapped = func() {
+						_ = StopTunnel(t)
+						tunnelList.Refresh()
+					}
+				} else {
+					start.SetText("Start")
+					start.OnTapped = func() {
+						if err := StartTunnel(t); err != nil {
+							log.Println("start tunnel:", err)
+						}
+						tunnelList.Refresh()
+					}
+				}
+
+				if selected >= 0 && IsProfileActive(profiles[selected]) {
+					edit.Disable()
+					del.Disable()
+				} else {
+					edit.Enable()
+					del.Enable()
+				}
+			},
+		)
+
+		addTunnelButton := widget.NewButton("Add Tunnel", func() {
+			if selected < 0 || selected >= len(profiles) {
+				return
+			}
+			showTunnelDialog(w, "New Tunnel", nil, func(t Tunnel) {
+				profiles[selected].Tunnels = append(profiles[selected].Tunnels, t)
+				if err := SaveProfiles(profiles); err != nil {
+					log.Println("failed to save profiles:", err)
+				}
+				tunnelList.Refresh()
+			})
+		})
 
 		createButton := widget.NewButton("Create", func() {
 			showProfileDialog(w, "New Profile", nil, func(p Profile) {
@@ -93,21 +234,66 @@ func main() {
 				list.UnselectAll()
 				selected = -1
 				list.Refresh()
+				tunnelList.Refresh()
 			}
 		})
 
-		activateButton := widget.NewButton("Activate", func() {
-			if selected >= 0 && selected < len(profiles) {
-				if err := ActivateProfile(profiles[selected]); err != nil {
-					log.Println("activate profile:", err)
-				}
+		activateButton := widget.NewButton("Activate", nil)
+
+		var updateActivate func()
+		var updateButtons func()
+
+		updateActivate = func() {
+			if selected >= 0 && selected < len(profiles) && IsProfileActive(profiles[selected]) {
+				activateButton.SetText("Deactivate")
+			} else {
+				activateButton.SetText("Activate")
 			}
-		})
+		}
+
+		updateButtons = func() {
+			if selected >= 0 && selected < len(profiles) && IsProfileActive(profiles[selected]) {
+				renameButton.Disable()
+				deleteButton.Disable()
+				addTunnelButton.Disable()
+			} else {
+				renameButton.Enable()
+				deleteButton.Enable()
+				addTunnelButton.Enable()
+			}
+		}
+
+		list.OnSelected = func(id widget.ListItemID) {
+			selected = int(id)
+			updateActivate()
+			updateButtons()
+			tunnelList.Refresh()
+		}
+
+		activateButton.OnTapped = func() {
+			if selected >= 0 && selected < len(profiles) {
+				if IsProfileActive(profiles[selected]) {
+					if err := DeactivateProfile(); err != nil {
+						log.Println("deactivate profile:", err)
+					}
+				} else {
+					if err := ActivateProfile(profiles[selected]); err != nil {
+						log.Println("activate profile:", err)
+					}
+				}
+				updateActivate()
+				updateButtons()
+				tunnelList.Refresh()
+			}
+		}
 
 		w.SetContent(container.NewVBox(
 			widget.NewLabel("Profiles"),
 			list,
 			container.NewHBox(createButton, renameButton, deleteButton, activateButton),
+			widget.NewLabel("Tunnels"),
+			tunnelList,
+			addTunnelButton,
 		))
 	}
 	w.ShowAndRun()

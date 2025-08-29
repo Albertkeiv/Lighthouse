@@ -83,3 +83,10 @@ func deactivateLocked() error {
 	activeTunnels = nil
 	return nil
 }
+
+// IsProfileActive returns true if the given profile is currently active.
+func IsProfileActive(p Profile) bool {
+	mu.Lock()
+	defer mu.Unlock()
+	return activeProfile != nil && activeProfile.Name == p.Name
+}
