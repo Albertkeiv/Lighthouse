@@ -5,7 +5,9 @@ Lighthouse is a cross-platform utility for managing SSH tunnels and local domain
 This repository currently provides a minimal prototype with the following features:
 
 - Data model for profiles and tunnels.
-- Loading and saving profiles from `~/.config/lighthouse/profiles.json`.
+- Loading and saving profiles from the user's configuration directory (e.g.
+  `~/.config/lighthouse/profiles.json`) or the current working directory if no
+  user configuration directory can be determined.
 - Basic graphical interface using [Fyne](https://fyne.io/) that lists configured profiles.
 - Ability to create and save new profiles through the interface.
 

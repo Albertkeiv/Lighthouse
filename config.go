@@ -13,10 +13,14 @@ import (
 const defaultConfigFile = "profiles.json"
 
 // configDir returns the directory where user specific configuration is stored.
+// It first attempts to locate the user's configuration directory via
+// os.UserConfigDir(). If that fails, it falls back to the current working
+// directory so that profiles can still be read and written.
 func configDir() (string, error) {
 	dir, err := os.UserConfigDir()
 	if err != nil {
-		return "", err
+		wd, _ := os.Getwd()
+		return wd, nil
 	}
 	return filepath.Join(dir, "lighthouse"), nil
 }
