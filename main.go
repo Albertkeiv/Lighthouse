@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"strconv"
 
 	"fyne.io/fyne/v2"
@@ -93,6 +95,20 @@ func showTunnelDialog(w fyne.Window, title string, t *Tunnel, onSave func(Tunnel
 }
 
 func main() {
+	logFile, err := os.OpenFile("lighthouse.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err == nil {
+		log.SetOutput(io.MultiWriter(os.Stderr, logFile))
+		defer logFile.Close()
+	} else {
+		log.Printf("open log file: %v", err)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("panic: %v", r)
+		}
+		_ = DeactivateProfile()
+	}()
+
 	a := app.New()
 	w := a.NewWindow("Lighthouse")
 
@@ -114,7 +130,8 @@ func main() {
 		)
 		selected := -1
 
-		tunnelList := widget.NewList(
+		var tunnelList *widget.List
+		tunnelList = widget.NewList(
 			func() int {
 				if selected >= 0 && selected < len(profiles) {
 					return len(profiles[selected].Tunnels)

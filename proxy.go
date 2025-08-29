@@ -54,6 +54,7 @@ func StartProxy(p Profile) error {
 	}
 
 	proxy = ps
+	log.Printf("proxy started for %s", p.IPAddress)
 	return nil
 }
 
@@ -74,6 +75,7 @@ func StopProxy() error {
 			firstErr = err
 		}
 	}
+	log.Printf("proxy stopped for %s", ps.ip)
 	return firstErr
 }
 
