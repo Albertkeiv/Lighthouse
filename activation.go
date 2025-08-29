@@ -47,6 +47,13 @@ func ActivateProfile(p Profile) error {
 		started = append(started, t)
 	}
 
+	if err := StartProxy(p); err != nil {
+		for _, st := range started {
+			_ = StopTunnel(st)
+		}
+		return err
+	}
+
 	activeProfile = &p
 	activeTunnels = started
 	return nil
@@ -68,6 +75,9 @@ func deactivateLocked() error {
 		if err := StopTunnel(t); err != nil {
 			return err
 		}
+	}
+	if err := StopProxy(); err != nil {
+		return err
 	}
 	activeProfile = nil
 	activeTunnels = nil
