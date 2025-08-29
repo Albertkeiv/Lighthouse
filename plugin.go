@@ -18,3 +18,10 @@ type Plugin interface {
 	AuthenticationProvider
 	EventHandler
 }
+
+var authProvider AuthenticationProvider
+
+// RegisterAuthenticationProvider installs the given authentication provider.
+func RegisterAuthenticationProvider(p AuthenticationProvider) {
+	authProvider = p
+}

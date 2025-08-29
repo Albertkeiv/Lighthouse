@@ -33,7 +33,23 @@ func ActivateProfile(p Profile) error {
 
 	var cmds []*exec.Cmd
 	for _, t := range p.Tunnels {
-		args := []string{"-N", "-L", fmt.Sprintf("%s:%d:%s:%d", t.LocalDomain, t.LocalPort, t.RemoteHost, t.RemotePort)}
+		if authProvider != nil {
+			if err := authProvider.Authenticate(t); err != nil {
+				for _, c := range cmds {
+					if c.Process != nil {
+						_ = c.Process.Kill()
+					}
+				}
+				return err
+			}
+		}
+
+		args := []string{
+			"-o", "PreferredAuthentications=publickey",
+			"-o", "PasswordAuthentication=no",
+			"-N",
+			"-L", fmt.Sprintf("%s:%d:%s:%d", t.LocalDomain, t.LocalPort, t.RemoteHost, t.RemotePort),
+		}
 		if t.SSHKeyPath != "" {
 			args = append(args, "-i", t.SSHKeyPath)
 		}
