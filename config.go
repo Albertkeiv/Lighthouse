@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -36,6 +37,11 @@ func LoadProfiles() ([]Profile, error) {
 	if err := json.Unmarshal(data, &profiles); err != nil {
 		return nil, err
 	}
+	for _, p := range profiles {
+		if err := p.Validate(); err != nil {
+			return nil, fmt.Errorf("invalid profile %s: %w", p.Name, err)
+		}
+	}
 	return profiles, nil
 }
 
@@ -47,6 +53,11 @@ func SaveProfiles(profiles []Profile) error {
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
+	}
+	for _, p := range profiles {
+		if err := p.Validate(); err != nil {
+			return fmt.Errorf("invalid profile %s: %w", p.Name, err)
+		}
 	}
 	data, err := json.MarshalIndent(profiles, "", "  ")
 	if err != nil {
