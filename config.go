@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -24,21 +25,28 @@ func configDir() (string, error) {
 func LoadProfiles() ([]Profile, error) {
 	dir, err := configDir()
 	if err != nil {
+		log.Printf("configDir: %v", err)
 		return nil, err
 	}
-	data, err := ioutil.ReadFile(filepath.Join(dir, defaultConfigFile))
+	path := filepath.Join(dir, defaultConfigFile)
+	log.Printf("loading profiles from %s", path)
+	data, err := ioutil.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
+		log.Printf("config file %s not found", path)
 		return []Profile{}, nil
 	}
 	if err != nil {
+		log.Printf("read config file %s: %v", path, err)
 		return nil, err
 	}
 	var profiles []Profile
 	if err := json.Unmarshal(data, &profiles); err != nil {
+		log.Printf("parse config file %s: %v", path, err)
 		return nil, err
 	}
 	for _, p := range profiles {
 		if err := p.Validate(); err != nil {
+			log.Printf("invalid profile %s: %v", p.Name, err)
 			return nil, fmt.Errorf("invalid profile %s: %w", p.Name, err)
 		}
 	}
