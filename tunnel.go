@@ -36,8 +36,20 @@ func StartTunnel(t Tunnel) error {
 	ts := &tunnelState{cancel: cancel, done: make(chan struct{})}
 	tunnelStates[t.Name] = ts
 	tunnelMu.Unlock()
-
-	go runTunnel(ctx, t, ts.done)
+	log.Printf("starting tunnel %s", t.Name)
+	go func() {
+		defer close(ts.done)
+		for {
+			if err := runTunnel(ctx, t); err != nil {
+				log.Printf("tunnel %s error: %v", t.Name, err)
+			}
+			if ctx.Err() != nil {
+				return
+			}
+			log.Printf("tunnel %s restarting", t.Name)
+			time.Sleep(time.Second)
+		}
+	}()
 	return nil
 }
 
@@ -54,29 +66,28 @@ func StopTunnel(t Tunnel) error {
 	}
 	ts.cancel()
 	<-ts.done
+	log.Printf("stopped tunnel %s", t.Name)
 	return nil
 }
 
-func runTunnel(ctx context.Context, t Tunnel, done chan<- struct{}) {
-	defer close(done)
+func runTunnel(ctx context.Context, t Tunnel) error {
 	localAddr := fmt.Sprintf("%s:%d", t.LocalDomain, t.LocalPort)
 	listener, err := net.Listen("tcp", localAddr)
 	if err != nil {
-		log.Printf("tunnel %s listen: %v", t.Name, err)
-		return
+		return fmt.Errorf("listen: %w", err)
 	}
 	defer listener.Close()
 
 	for {
 		if ctx.Err() != nil {
-			return
+			return nil
 		}
 		client, err := dialSSH(t)
 		if err != nil {
 			log.Printf("tunnel %s dial: %v", t.Name, err)
 			select {
 			case <-ctx.Done():
-				return
+				return nil
 			case <-time.After(time.Second):
 			}
 			continue
@@ -88,7 +99,7 @@ func runTunnel(ctx context.Context, t Tunnel, done chan<- struct{}) {
 		}
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case <-time.After(time.Second):
 		}
 	}
