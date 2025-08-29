@@ -30,6 +30,10 @@ func main() {
 				o.(*widget.Label).SetText(names[i])
 			},
 		)
+		selected := -1
+		list.OnSelected = func(id widget.ListItemID) {
+			selected = int(id)
+		}
 
 		addButton := widget.NewButton("Add Profile", func() {
 			nameEntry := widget.NewEntry()
@@ -51,10 +55,23 @@ func main() {
 			}, w)
 		})
 
+		activateButton := widget.NewButton("Activate", func() {
+			if selected >= 0 && selected < len(profiles) {
+				if err := ActivateProfile(profiles[selected]); err != nil {
+					log.Println("activate profile:", err)
+				}
+			}
+		})
+		deactivateButton := widget.NewButton("Deactivate", func() {
+			if err := DeactivateProfile(); err != nil {
+				log.Println("deactivate profile:", err)
+			}
+		})
+
 		w.SetContent(container.NewVBox(
 			widget.NewLabel("Profiles"),
 			list,
-			addButton,
+			container.NewHBox(activateButton, deactivateButton, addButton),
 		))
 	}
 	w.ShowAndRun()
