@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -51,6 +52,7 @@ func AddHostEntry(ip, domain string) error {
 		return err
 	}
 	if strings.Contains(string(data), entry) {
+		log.Printf("hosts entry already exists: %s", entry)
 		return nil
 	}
 
@@ -63,6 +65,7 @@ func AddHostEntry(ip, domain string) error {
 	if _, err := fmt.Fprintln(f, entry); err != nil {
 		return err
 	}
+	log.Printf("added hosts entry: %s", entry)
 	return nil
 }
 
@@ -99,10 +102,19 @@ func RemoveHostEntries(ip, domain string) error {
 	}
 
 	if !removed {
+		log.Printf("no hosts entry found for %s %s", ip, domain)
 		return nil
 	}
 
-	return writeHostsFile(path, buf.Bytes())
+	if err := writeHostsFile(path, buf.Bytes()); err != nil {
+		return err
+	}
+	if domain == "" {
+		log.Printf("removed hosts entries for %s", ip)
+	} else {
+		log.Printf("removed hosts entry: %s %s", ip, domain)
+	}
+	return nil
 }
 
 // writeHostsFile writes content to the hosts file.
