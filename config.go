@@ -88,6 +88,7 @@ func SaveProfiles(profiles []Profile) error {
 
 	for _, p := range profiles {
 		if err := p.Validate(); err != nil {
+			log.Printf("invalid profile %s: %v", p.Name, err)
 			return fmt.Errorf("invalid profile %s: %w", p.Name, err)
 		}
 		log.Printf("saving profile %s", p.Name)
@@ -119,6 +120,7 @@ func SaveProfile(p Profile) error {
 	}
 
 	if err := p.Validate(); err != nil {
+		log.Printf("invalid profile %s: %v", p.Name, err)
 		return fmt.Errorf("invalid profile %s: %w", p.Name, err)
 	}
 	log.Printf("saving profile %s", p.Name)
