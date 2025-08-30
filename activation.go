@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"sync"
 )
 
@@ -56,6 +57,7 @@ func ActivateProfile(p Profile) error {
 
 	activeProfile = &p
 	activeTunnels = started
+	log.Printf("activated profile %s", p.Name)
 	return nil
 }
 
@@ -79,6 +81,7 @@ func deactivateLocked() error {
 	if err := StopProxy(); err != nil {
 		return err
 	}
+	log.Printf("deactivated profile %s", activeProfile.Name)
 	activeProfile = nil
 	activeTunnels = nil
 	return nil
