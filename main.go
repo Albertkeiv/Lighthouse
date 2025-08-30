@@ -208,9 +208,8 @@ func main() {
 				return
 			}
 			showTunnelDialog(w, "New Tunnel", nil, func(t Tunnel) {
-				profiles[selected].Tunnels = append(profiles[selected].Tunnels, t)
-				if err := SaveProfile(profiles[selected]); err != nil {
-					log.Println("failed to save profile:", err)
+				if err := profiles[selected].AddTunnel(t); err != nil {
+					log.Println("failed to add tunnel:", err)
 				}
 				tunnelList.Refresh()
 			})
