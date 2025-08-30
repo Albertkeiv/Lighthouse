@@ -102,6 +102,7 @@ func main() {
 	logFile, err := os.OpenFile("lighthouse.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err == nil {
 		log.SetOutput(io.MultiWriter(os.Stderr, logFile))
+		log.SetFlags(log.LstdFlags | log.Lshortfile)
 		defer logFile.Close()
 	} else {
 		log.Printf("open log file: %v", err)

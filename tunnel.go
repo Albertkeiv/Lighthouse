@@ -76,6 +76,7 @@ func StopTunnel(p Profile, t Tunnel) error {
 		log.Printf("stopped tunnel %s", t.Name)
 	}
 	if err := RemoveHostEntries(p.IPAddress, t.Domain); err != nil {
+		log.Printf("failed to remove hosts entry for %s %s: %v", p.IPAddress, t.Domain, err)
 		return err
 	}
 	return nil
