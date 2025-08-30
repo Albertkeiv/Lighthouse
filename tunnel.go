@@ -23,10 +23,10 @@ var (
 	tunnelMu     sync.Mutex
 )
 
-// StartTunnel launches the SSH tunnel described by t. It listens on the
-// configured local address and forwards connections to the remote host. The
-// tunnel automatically tries to reconnect if the SSH connection drops.
-func StartTunnel(t Tunnel) error {
+// StartTunnel launches the SSH tunnel described by t for profile p. It listens on the
+// profile's IP address and forwards connections to the remote host. The tunnel
+// automatically tries to reconnect if the SSH connection drops.
+func StartTunnel(p Profile, t Tunnel) error {
 	tunnelMu.Lock()
 	if _, ok := tunnelStates[t.Name]; ok {
 		tunnelMu.Unlock()
@@ -36,11 +36,20 @@ func StartTunnel(t Tunnel) error {
 	ts := &tunnelState{cancel: cancel, done: make(chan struct{})}
 	tunnelStates[t.Name] = ts
 	tunnelMu.Unlock()
+
+	if err := AddHostEntry(p.IPAddress, t.Domain); err != nil {
+		tunnelMu.Lock()
+		delete(tunnelStates, t.Name)
+		tunnelMu.Unlock()
+		cancel()
+		return err
+	}
+
 	log.Printf("starting tunnel %s", t.Name)
 	go func() {
 		defer close(ts.done)
 		for {
-			if err := runTunnel(ctx, t); err != nil {
+			if err := runTunnel(ctx, p, t); err != nil {
 				log.Printf("tunnel %s error: %v", t.Name, err)
 			}
 			if ctx.Err() != nil {
@@ -53,25 +62,27 @@ func StartTunnel(t Tunnel) error {
 	return nil
 }
 
-// StopTunnel stops the running tunnel described by t.
-func StopTunnel(t Tunnel) error {
+// StopTunnel stops the running tunnel described by t for profile p.
+func StopTunnel(p Profile, t Tunnel) error {
 	tunnelMu.Lock()
 	ts, ok := tunnelStates[t.Name]
 	if ok {
 		delete(tunnelStates, t.Name)
 	}
 	tunnelMu.Unlock()
-	if !ok {
-		return nil
+	if ok {
+		ts.cancel()
+		<-ts.done
+		log.Printf("stopped tunnel %s", t.Name)
 	}
-	ts.cancel()
-	<-ts.done
-	log.Printf("stopped tunnel %s", t.Name)
+	if err := RemoveHostEntries(p.IPAddress, t.Domain); err != nil {
+		return err
+	}
 	return nil
 }
 
-func runTunnel(ctx context.Context, t Tunnel) error {
-	localAddr := fmt.Sprintf("%s:%d", t.LocalDomain, t.LocalPort)
+func runTunnel(ctx context.Context, p Profile, t Tunnel) error {
+	localAddr := fmt.Sprintf("%s:%d", p.IPAddress, t.LocalPort)
 	listener, err := net.Listen("tcp", localAddr)
 	if err != nil {
 		return fmt.Errorf("listen: %w", err)
