@@ -8,15 +8,15 @@ import (
 
 // Tunnel represents a single SSH tunnel configuration within a profile.
 type Tunnel struct {
-	Name        string `json:"name" yaml:"name"`
-	SSHServer   string `json:"ssh_server" yaml:"ssh_server"`
-	SSHPort     int    `json:"ssh_port" yaml:"ssh_port"`
-	SSHUser     string `json:"ssh_user" yaml:"ssh_user"`
-	SSHKeyPath  string `json:"ssh_key_path" yaml:"ssh_key_path"`
-	RemoteHost  string `json:"remote_host" yaml:"remote_host"`
-	RemotePort  int    `json:"remote_port" yaml:"remote_port"`
-	LocalDomain string `json:"local_domain" yaml:"local_domain"`
-	LocalPort   int    `json:"local_port" yaml:"local_port"`
+	Name       string `json:"name" yaml:"name"`
+	SSHServer  string `json:"ssh_server" yaml:"ssh_server"`
+	SSHPort    int    `json:"ssh_port" yaml:"ssh_port"`
+	SSHUser    string `json:"ssh_user" yaml:"ssh_user"`
+	SSHKeyPath string `json:"ssh_key_path" yaml:"ssh_key_path"`
+	RemoteHost string `json:"remote_host" yaml:"remote_host"`
+	RemotePort int    `json:"remote_port" yaml:"remote_port"`
+	Domain     string `json:"domain" yaml:"domain"`
+	LocalPort  int    `json:"local_port" yaml:"local_port"`
 }
 
 // Validate checks that all required tunnel fields are present.
@@ -42,8 +42,8 @@ func (t Tunnel) Validate() error {
 	if t.RemotePort <= 0 {
 		return errors.New("remote_port must be > 0")
 	}
-	if t.LocalDomain == "" {
-		return errors.New("local_domain is required")
+	if t.Domain == "" {
+		return errors.New("domain is required")
 	}
 	if t.LocalPort <= 0 {
 		return errors.New("local_port must be > 0")

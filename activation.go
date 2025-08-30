@@ -27,37 +27,20 @@ func ActivateProfile(p Profile) error {
 		return nil
 	}
 
-	var (
-		started []Tunnel
-		added   []Tunnel
-	)
+	var started []Tunnel
 	for _, t := range p.Tunnels {
-		if err := AddHostEntry(p.IPAddress, t.LocalDomain); err != nil {
-			for _, at := range added {
-				_ = RemoveHostEntries(p.IPAddress, at.LocalDomain)
-			}
-			return err
-		}
-		added = append(added, t)
-
 		if authProvider != nil {
 			if err := authProvider.Authenticate(t); err != nil {
 				for _, st := range started {
-					_ = StopTunnel(st)
-				}
-				for _, at := range added {
-					_ = RemoveHostEntries(p.IPAddress, at.LocalDomain)
+					_ = StopTunnel(p, st)
 				}
 				return err
 			}
 		}
 
-		if err := StartTunnel(t); err != nil {
+		if err := StartTunnel(p, t); err != nil {
 			for _, st := range started {
-				_ = StopTunnel(st)
-			}
-			for _, at := range added {
-				_ = RemoveHostEntries(p.IPAddress, at.LocalDomain)
+				_ = StopTunnel(p, st)
 			}
 			return err
 		}
@@ -66,10 +49,7 @@ func ActivateProfile(p Profile) error {
 
 	if err := StartProxy(p); err != nil {
 		for _, st := range started {
-			_ = StopTunnel(st)
-		}
-		for _, at := range added {
-			_ = RemoveHostEntries(p.IPAddress, at.LocalDomain)
+			_ = StopTunnel(p, st)
 		}
 		return err
 	}
@@ -92,8 +72,7 @@ func deactivateLocked() error {
 		return nil
 	}
 	for _, t := range activeTunnels {
-		_ = RemoveHostEntries(activeProfile.IPAddress, t.LocalDomain)
-		if err := StopTunnel(t); err != nil {
+		if err := StopTunnel(*activeProfile, t); err != nil {
 			return err
 		}
 	}

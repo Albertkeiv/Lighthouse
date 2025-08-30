@@ -4,7 +4,9 @@ Lighthouse is a cross-platform utility for managing SSH tunnels and local domain
 
 This repository currently provides a minimal prototype with the following features:
 
-- Data model for profiles and tunnels.
+- Data model for profiles and tunnels. Each tunnel includes a `domain` field
+  specifying the remote domain to redirect and uses the profile's `ip_address`
+  for the local listener.
 - Loading and saving profiles from the user's configuration directory (e.g.
   `~/.config/lighthouse/profiles.json`) or the current working directory if no
   user configuration directory can be determined.

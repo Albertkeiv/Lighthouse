@@ -48,7 +48,7 @@ func showTunnelDialog(w fyne.Window, title string, t *Tunnel, onSave func(Tunnel
 	sshKeyPathEntry := widget.NewEntry()
 	remoteHostEntry := widget.NewEntry()
 	remotePortEntry := widget.NewEntry()
-	localDomainEntry := widget.NewEntry()
+	domainEntry := widget.NewEntry()
 	localPortEntry := widget.NewEntry()
 
 	if t != nil {
@@ -59,7 +59,7 @@ func showTunnelDialog(w fyne.Window, title string, t *Tunnel, onSave func(Tunnel
 		sshKeyPathEntry.SetText(t.SSHKeyPath)
 		remoteHostEntry.SetText(t.RemoteHost)
 		remotePortEntry.SetText(fmt.Sprintf("%d", t.RemotePort))
-		localDomainEntry.SetText(t.LocalDomain)
+		domainEntry.SetText(t.Domain)
 		localPortEntry.SetText(fmt.Sprintf("%d", t.LocalPort))
 	}
 
@@ -71,7 +71,7 @@ func showTunnelDialog(w fyne.Window, title string, t *Tunnel, onSave func(Tunnel
 		{Text: "SSH Key Path", Widget: sshKeyPathEntry},
 		{Text: "Remote Host", Widget: remoteHostEntry},
 		{Text: "Remote Port", Widget: remotePortEntry},
-		{Text: "Local Domain", Widget: localDomainEntry},
+		{Text: "Domain", Widget: domainEntry},
 		{Text: "Local Port", Widget: localPortEntry},
 	}, func(b bool) {
 		if !b {
@@ -81,15 +81,15 @@ func showTunnelDialog(w fyne.Window, title string, t *Tunnel, onSave func(Tunnel
 		remotePort, _ := strconv.Atoi(remotePortEntry.Text)
 		localPort, _ := strconv.Atoi(localPortEntry.Text)
 		onSave(Tunnel{
-			Name:        nameEntry.Text,
-			SSHServer:   sshServerEntry.Text,
-			SSHPort:     sshPort,
-			SSHUser:     sshUserEntry.Text,
-			SSHKeyPath:  sshKeyPathEntry.Text,
-			RemoteHost:  remoteHostEntry.Text,
-			RemotePort:  remotePort,
-			LocalDomain: localDomainEntry.Text,
-			LocalPort:   localPort,
+			Name:       nameEntry.Text,
+			SSHServer:  sshServerEntry.Text,
+			SSHPort:    sshPort,
+			SSHUser:    sshUserEntry.Text,
+			SSHKeyPath: sshKeyPathEntry.Text,
+			RemoteHost: remoteHostEntry.Text,
+			RemotePort: remotePort,
+			Domain:     domainEntry.Text,
+			LocalPort:  localPort,
 		})
 	}, w)
 }
@@ -180,13 +180,13 @@ func main() {
 				if IsTunnelRunning(t) {
 					start.SetText("Stop")
 					start.OnTapped = func() {
-						_ = StopTunnel(t)
+						_ = StopTunnel(profiles[selected], t)
 						tunnelList.Refresh()
 					}
 				} else {
 					start.SetText("Start")
 					start.OnTapped = func() {
-						if err := StartTunnel(t); err != nil {
+						if err := StartTunnel(profiles[selected], t); err != nil {
 							log.Println("start tunnel:", err)
 						}
 						tunnelList.Refresh()
