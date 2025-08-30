@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
+	"runtime"
 	"strconv"
 
 	"fyne.io/fyne/v2"
@@ -13,6 +13,33 @@ import (
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/widget"
 )
+
+type logWriter struct {
+	file    *os.File
+	console bool
+}
+
+func newLogWriter(f *os.File) *logWriter {
+	return &logWriter{file: f, console: hasConsole()}
+}
+
+func (w *logWriter) Write(p []byte) (int, error) {
+	n, err := w.file.Write(p)
+	if w.console {
+		if _, e := os.Stderr.Write(p); e != nil {
+			// ignore stderr write errors
+		}
+	}
+	return n, err
+}
+
+func hasConsole() bool {
+	if runtime.GOOS != "windows" {
+		return true
+	}
+	_, err := os.Stderr.Stat()
+	return err == nil
+}
 
 // showProfileDialog displays a dialog for creating or editing a profile.
 // If p is non-nil, its fields are used to pre-populate the dialog entries.
@@ -101,7 +128,7 @@ func showTunnelDialog(w fyne.Window, title string, t *Tunnel, onSave func(Tunnel
 func main() {
 	logFile, err := os.OpenFile("lighthouse.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	if err == nil {
-		log.SetOutput(io.MultiWriter(os.Stderr, logFile))
+		log.SetOutput(newLogWriter(logFile))
 		log.SetFlags(log.LstdFlags | log.Lshortfile)
 		log.Println("logging initialized")
 		defer logFile.Close()
