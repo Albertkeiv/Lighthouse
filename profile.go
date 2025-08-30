@@ -75,3 +75,13 @@ func (p Profile) Validate() error {
 	}
 	return nil
 }
+
+// AddTunnel appends a new tunnel to the profile and persists the updated
+// profile to disk. The tunnel configuration is validated before saving.
+func (p *Profile) AddTunnel(t Tunnel) error {
+	if err := t.Validate(); err != nil {
+		return fmt.Errorf("invalid tunnel %s: %w", t.Name, err)
+	}
+	p.Tunnels = append(p.Tunnels, t)
+	return SaveProfile(*p)
+}
