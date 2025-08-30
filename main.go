@@ -162,8 +162,8 @@ func main() {
 					existing := t
 					showTunnelDialog(w, "Edit Tunnel", &existing, func(nt Tunnel) {
 						profiles[selected].Tunnels[i] = nt
-						if err := SaveProfiles(profiles); err != nil {
-							log.Println("failed to save profiles:", err)
+						if err := SaveProfile(profiles[selected]); err != nil {
+							log.Println("failed to save profile:", err)
 						}
 						tunnelList.Refresh()
 					})
@@ -171,8 +171,8 @@ func main() {
 
 				del.OnTapped = func() {
 					profiles[selected].Tunnels = append(profiles[selected].Tunnels[:i], profiles[selected].Tunnels[i+1:]...)
-					if err := SaveProfiles(profiles); err != nil {
-						log.Println("failed to save profiles:", err)
+					if err := SaveProfile(profiles[selected]); err != nil {
+						log.Println("failed to save profile:", err)
 					}
 					tunnelList.Refresh()
 				}
@@ -209,8 +209,8 @@ func main() {
 			}
 			showTunnelDialog(w, "New Tunnel", nil, func(t Tunnel) {
 				profiles[selected].Tunnels = append(profiles[selected].Tunnels, t)
-				if err := SaveProfiles(profiles); err != nil {
-					log.Println("failed to save profiles:", err)
+				if err := SaveProfile(profiles[selected]); err != nil {
+					log.Println("failed to save profile:", err)
 				}
 				tunnelList.Refresh()
 			})
