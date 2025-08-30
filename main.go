@@ -103,6 +103,7 @@ func main() {
 	if err == nil {
 		log.SetOutput(io.MultiWriter(os.Stderr, logFile))
 		log.SetFlags(log.LstdFlags | log.Lshortfile)
+		log.Println("logging initialized")
 		defer logFile.Close()
 	} else {
 		log.Printf("open log file: %v", err)
