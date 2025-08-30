@@ -26,7 +26,7 @@ func showProfileDialog(w fyne.Window, title string, p *Profile, onSave func(Prof
 		ipEntry.SetText(p.IPAddress)
 	}
 
-	dialog.ShowForm(title, "Save", "Cancel", []*widget.FormItem{
+	d := dialog.NewForm(title, "Save", "Cancel", []*widget.FormItem{
 		{Text: "Name", Widget: nameEntry},
 		{Text: "IP", Widget: ipEntry},
 	}, func(b bool) {
@@ -35,6 +35,8 @@ func showProfileDialog(w fyne.Window, title string, p *Profile, onSave func(Prof
 		}
 		onSave(Profile{Name: nameEntry.Text, IPAddress: ipEntry.Text})
 	}, w)
+	d.Resize(fyne.NewSize(400, d.MinSize().Height))
+	d.Show()
 }
 
 // showTunnelDialog displays a dialog for creating or editing a tunnel configuration.
@@ -63,7 +65,7 @@ func showTunnelDialog(w fyne.Window, title string, t *Tunnel, onSave func(Tunnel
 		localPortEntry.SetText(fmt.Sprintf("%d", t.LocalPort))
 	}
 
-	dialog.ShowForm(title, "Save", "Cancel", []*widget.FormItem{
+	d := dialog.NewForm(title, "Save", "Cancel", []*widget.FormItem{
 		{Text: "Name", Widget: nameEntry},
 		{Text: "SSH Server", Widget: sshServerEntry},
 		{Text: "SSH Port", Widget: sshPortEntry},
@@ -92,6 +94,8 @@ func showTunnelDialog(w fyne.Window, title string, t *Tunnel, onSave func(Tunnel
 			LocalPort:  localPort,
 		})
 	}, w)
+	d.Resize(fyne.NewSize(600, d.MinSize().Height))
+	d.Show()
 }
 
 func main() {
@@ -312,5 +316,6 @@ func main() {
 			addTunnelButton,
 		))
 	}
+	w.Resize(fyne.NewSize(800, 600))
 	w.ShowAndRun()
 }
