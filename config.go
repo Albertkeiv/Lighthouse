@@ -109,3 +109,31 @@ func SaveProfiles(profiles []Profile) error {
 
 	return os.WriteFile(path, data, 0o600)
 }
+
+// SaveProfile updates or adds a single profile and writes the full profile list
+// to the configuration file.
+func SaveProfile(p Profile) error {
+	profiles, err := LoadProfiles()
+	if err != nil {
+		return err
+	}
+
+	if err := p.Validate(); err != nil {
+		return fmt.Errorf("invalid profile %s: %w", p.Name, err)
+	}
+	log.Printf("saving profile %s", p.Name)
+
+	updated := false
+	for i, existing := range profiles {
+		if existing.Name == p.Name {
+			profiles[i] = p
+			updated = true
+			break
+		}
+	}
+	if !updated {
+		profiles = append(profiles, p)
+	}
+
+	return SaveProfiles(profiles)
+}
