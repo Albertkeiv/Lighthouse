@@ -91,6 +91,7 @@ func (ps *proxyServer) acceptLoop(ctx context.Context, pl proxyListener) {
 				continue
 			}
 		}
+		log.Printf("proxy accepted %s for port %d", c.RemoteAddr(), pl.localPort)
 		go ps.handleConn(ctx, c, pl.localPort)
 	}
 }
@@ -103,6 +104,7 @@ func (ps *proxyServer) handleConn(ctx context.Context, conn net.Conn, port int) 
 		conn.Close()
 		return
 	}
+	log.Printf("proxy forwarding %s to %s:%d", conn.RemoteAddr(), ps.ip, port)
 
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
@@ -119,4 +121,5 @@ func (ps *proxyServer) handleConn(ctx context.Context, conn net.Conn, port int) 
 		cancel()
 	}()
 	<-ctx.Done()
+	log.Printf("proxy connection %s closed", conn.RemoteAddr())
 }
